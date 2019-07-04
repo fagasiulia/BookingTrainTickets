@@ -4,9 +4,9 @@ public class Statii {
 	private final int id_ruta;
 	private final int id_statie;
 	private String statie;
-	private int km;
+	private double km;
 	
-	public Statii(int id_ruta, int id_statie, String statie, int km){
+	public Statii(int id_ruta, int id_statie, String statie, double km){
 		this.id_ruta = id_ruta;
 		this.id_statie = id_statie;
 		this.statie = statie;
@@ -21,7 +21,7 @@ public class Statii {
 		this.statie = statie;
 	}
 
-	public int getKm() {
+	public double getKm() {
 		return km;
 	}
 
