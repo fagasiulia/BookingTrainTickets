@@ -22,7 +22,6 @@ public class Datasource {
 	private PreparedStatement queryPlecari;
 	private PreparedStatement querySeat;
 	private PreparedStatement addRezervation;
-	private PreparedStatement addStationDetails;
 	private PreparedStatement queryRuta;
 	
 	// Open connection
@@ -35,7 +34,6 @@ public class Datasource {
 			queryPlecari = conn.prepareStatement(Constante.QUERY_SOSIRI_PLECARI);
 			querySeat = conn.prepareStatement(Constante.QUERY_REZERVARI);
 			addRezervation = conn.prepareStatement(Constante.ADD_REZERVATION);
-			addStationDetails = conn.prepareStatement(Constante.ADD_STATION_DETAILS);
 			queryRuta = conn.prepareStatement(Constante.SEARCH_ROUTE);
 
 			return true;
@@ -51,9 +49,6 @@ public class Datasource {
 		try {
 			if (queryRuta != null) {
 				queryRuta.close();
-			}
-			if (addStationDetails != null) {
-				addStationDetails.close();
 			}
 			if (addRezervation != null) {
 				addRezervation.close();
@@ -172,7 +167,7 @@ public class Datasource {
 		}
 	}
 	
-	// Add a rezervation
+	// Add a reservation
 	private void addRezervation(String data, String orasPlecare, String orasDestinatie, int id_tren) throws SQLException{
 		addRezervation.setString(1, data);
 		addRezervation.setString(2, orasPlecare);
@@ -192,106 +187,39 @@ public class Datasource {
 		return ((kmArrival - kmDeparture) * Constante.PRICE_PER_KM);
 	}
 	
-	// Booking method *******************/
-	private void booking(String departure, String destination, String date){
+	// Pair route with departure/arrival hours
+	private Map<Map<Statii, Statii>, Map <SosiriPlecari, SosiriPlecari>> routeDepartureArrival(String departure, String destination){
 		try {
+			Map<Map<Statii, Statii>, Map <SosiriPlecari, SosiriPlecari>> fullDetailsMap = new HashMap<>();
+			
 			Map<Statii, Statii> route = queryRoute(departure, destination);
 			if(route.isEmpty()){
 				System.out.println("Unable to find the requested route!");
 				//**** Try again function ****/
+				return null;
 			}
 			// If route is not empty that means we can proceed with searching for leaving/arrival hours
 			else{
-				Map<SosiriPlecari, SosiriPlecari> sosiriPlecariMap = new HashMap<>();
 				// Parse the route map to get all the pairs departure/destination id_station 
 				for(Entry<Statii, Statii> s : route.entrySet()){
-					// Save the results in a temp Map and copy the findings to the original Map
+					// Save the current route in a Map
+			        Map<Statii, Statii> currentRoute = new HashMap<>();
+			        currentRoute.put(s.getKey(), s.getValue());
+					
+			        // Create a Map for current route hours
+			        Map<SosiriPlecari, SosiriPlecari> sosiriPlecariForCurrentRoute = new HashMap<>();
+					
+			        // Save the results in a temp Map and copy the findings to the original Map
 					Map<SosiriPlecari, SosiriPlecari> temp = sosiriPlecari(s.getKey().getId_statie(), s.getValue().getId_statie());
 					for(Entry<SosiriPlecari, SosiriPlecari> t: temp.entrySet()){
-						sosiriPlecariMap.put(t.getKey(), t.getValue());
+						sosiriPlecariForCurrentRoute.put(t.getKey(), t.getValue());
+						fullDetailsMap.put(currentRoute, sosiriPlecariForCurrentRoute);
 					}
 				}
-				// Check if the sosiriPlecariMap is empty. If it is that means something went wrong as 
-				// no matched has been found for the desired route
-				if(sosiriPlecariMap.isEmpty()){
-					System.out.println("Oops, something went wrong! Check your database!");
-				}
-				// If the Map is not empty search for seat availability and save all the options in a List
-				else{
-					ArrayList<Integer> id_loc = new ArrayList<>();
-					for(SosiriPlecari sp: sosiriPlecariMap.values()){
-						int id_tren = searchSeatAvailability(sp.getId_tren());
-						id_loc.add(id_tren);
-					}
-					// If train_id ArrayList is empty that means no seat available for the requested route
-					if(id_loc.isEmpty()){
-						System.out.println("No seat available!");
-						//***** Try again function ********//
-					}
-					else{
-						
-					}
-				}
+				return fullDetailsMap;
 			}
 		} catch (SQLException e) {
 			System.out.println("Unable to perfom the operation! " + e.getMessage());
-		}
-	}
-	
-	// Add Departure/ Arrival station details to RezervareDetalii
-	private void addStationsDetails(Map<Statii, Statii> statii, String data){
-		if(statii.isEmpty()){
-			System.out.println("No route was found! ");
-		}
-		else{
-			
-			for(Entry<Statii, Statii> s : statii.entrySet()){
-				String orasPlecare = s.getKey().getStatie();
-				double kmPlecare = s.getKey().getKm();
-				String ruta = getRoute(s.getKey().getId_ruta());
-				String orasSosire = s.getValue().getStatie();
-				double kmSosire = s.getValue().getKm();
-				double price = calculateTicketPrice(kmPlecare, kmSosire);
-				
-				try {
-					addStationDetails.setString(1, orasPlecare);
-					addStationDetails.setDouble(2, kmPlecare);
-					addStationDetails.setString(3, orasSosire);
-					addStationDetails.setDouble(4, kmSosire);
-					addStationDetails.setString(5, ruta);
-					addStationDetails.setDouble(6, price);
-					
-				} catch (SQLException e) {
-					System.out.println("Unable to addStationDetails " + e.getMessage());
-				}
-				
-				try(Statement statement = conn.createStatement();
-						ResultSet result = addStationDetails.executeQuery()){
-					
-				}catch(SQLException e){
-					System.out.println("Unable to execute addStationDetails query! " + e.getMessage());
-				}
-			}
-		}
-	}
-	
-	// Get route based on id
-	private String getRoute(int id){
-		String ruta = "";
-		try {
-			queryRuta.setInt(1, id);
-		} catch (SQLException e) {
-			System.out.println("Unable to set id_route for searching the route! " + e.getMessage());
-			return null;
-		}
-		try(Statement statement = conn.createStatement();
-				ResultSet result = queryRuta.executeQuery()){
-			ruta = result.getString(Constante.COLUMN_REZERVARE_DETALII_RUTA);
-			
-			return ruta;
-			
-		}catch(SQLException e){
-			System.out.println("Unable to execute query for searching the route! " + e.getMessage());
 			return null;
 		}
 	}
