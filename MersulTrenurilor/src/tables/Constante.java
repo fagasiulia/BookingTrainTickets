@@ -16,7 +16,7 @@ public class Constante {
 	public static final String COLUMN_STATII_ID_RUTA = "ID_RUTA";
 	public static final String COLUMN_STATII_ID_STATIE = "ID_STATIE";
 	public static final String COLUMN_STATII_STATIE = "STATIE";
-	public static final String COLUMN_STATII_KILOMETRU = "KILOMETRU";
+	public static final String COLUMN_STATII_KILOMETRU = "KILOMERTU";
 	
 	public static final String TABLE_TRENURI = "Trenuri";
 	public static final String COLUMN_TRENURI_ID_TREN = "ID_TREN";
